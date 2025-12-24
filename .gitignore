@@ -4,3 +4,10 @@ spy.jpg
 .idea/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+.vscode/
+.DS_Store
+Thumbs.db
