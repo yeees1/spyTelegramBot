@@ -1,3 +1,6 @@
 .env
 Архив.zip
 spy.jpg
+.idea/
+__pycache__/
+*.pyc
