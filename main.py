@@ -177,7 +177,7 @@ async def start_handler(message: types.Message):
         if req == False: await message.answer("❌ Такой игры не существует"); return
         usersCount = len(getUsersFromSession(payload))
         if usersCount+1 > 30: await message.answer("❌ Достигнут лимит в 30 игроков"); return
-        if req[0][7] == "1": await message.answer("❌ Игра уже запущена"); return
+        if req[0][6] == "1": await message.answer("❌ Игра уже запущена"); return
         userId = str(message.from_user.id)
         checkUser = checkUserInSession(userId, payload)
         if not checkUser:
@@ -381,6 +381,59 @@ async def session_list(message: types.Message):
         sessionList+=tempText
     await message.reply(sessionList)
 
+@dp.message(Command("users_list"))
+async def users_list(message: types.Message):
+    if message.from_user.id != int(admin_id): return
+    dataUsers = getAllUsers()
+    usersList = "list\n"
+    for el in dataUsers:
+        tempText = ""
+        for info in el:
+            tempText+=f"| {info} "
+        tempText+='\n'
+        if len(usersList) + len(tempText) > 4000:
+            await message.reply(usersList)
+            usersList = ""
+        usersList+=tempText
+    await message.reply(usersList)
+
+@dp.message(Command("dell_user"))
+async def session_list(message: types.Message):
+    if message.from_user.id != int(admin_id): return
+    args = message.text.split(maxsplit=1)
+    payload = args[1] if len(args) == 2 else None
+    if payload:
+        delUserById(payload)
+        req = getUserById(payload)
+        if not req: await message.reply("Пользователь успешно удален"); return
+        await message.reply("Попробуйте еще раз")
+
+@dp.message(Command("spy_list"))
+async def spy_list(message: types.Message):
+    if message.from_user.id != int(admin_id): return
+    dataUsers = getAllSpies()
+    usersList = "list\n"
+    for el in dataUsers:
+        tempText = ""
+        for info in el:
+            tempText+=f"| {info} "
+        tempText+='\n'
+        if len(usersList) + len(tempText) > 4000:
+            await message.reply(usersList)
+            usersList = ""
+        usersList+=tempText
+    await message.reply(usersList)
+
+@dp.message(Command("dell_spy"))
+async def spy_list(message: types.Message):
+    if message.from_user.id != int(admin_id): return
+    args = message.text.split(maxsplit=1)
+    payload = args[1] if len(args) == 2 else None
+    if payload:
+        delSpiesById(payload)
+        req = getSpiesById(payload)
+        if not req: await message.reply("Пользователь успешно удален"); return
+        await message.reply("Попробуйте еще раз")
 @dp.message(Command("dell_session"))
 async def session_list(message: types.Message):
     if message.from_user.id != int(admin_id): return

@@ -118,5 +118,27 @@ def getAllSession():
     cursor.execute("SELECT * FROM sessions")
     result = cursor.fetchall()
     return result
+def getAllUsers():
+    cursor.execute("SELECT * FROM users")
+    result = cursor.fetchall()
+    return result
+def delUserById(id):
+    cursor.execute("DELETE FROM users WHERE id = ?", (id,))
+    conn.commit()
+def getUserById(id):
+    cursor.execute("SELECT * FROM users WHERE id =?", (id,))
+    result = cursor.fetchall()
+    return result
+def getAllSpies():
+    cursor.execute("SELECT * FROM spies")
+    result = cursor.fetchall()
+    return result
+def delSpiesById(id):
+    cursor.execute("DELETE FROM spies WHERE id = ?", (id,))
+    conn.commit()
+def getSpiesById(id):
+    cursor.execute("SELECT * FROM spies WHERE id =?", (id,))
+    result = cursor.fetchall()
+    return result
 
 
