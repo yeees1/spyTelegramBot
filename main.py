@@ -175,6 +175,8 @@ async def start_handler(message: types.Message):
     if payload:
         req = getSession(payload)
         if req == False: await message.answer("❌ Такой игры не существует"); return
+        usersCount = len(getUsersFromSession(payload))
+        if usersCount+1 > 30: await message.answer("❌ Достигнут лимит в 30 игроков"); return
         if req[0][7] == "1": await message.answer("❌ Игра уже запущена"); return
         userId = str(message.from_user.id)
         checkUser = checkUserInSession(userId, payload)
