@@ -114,5 +114,9 @@ def getSpies(groupId):
     cursor.execute("SELECT * FROM spies WHERE group_id=?", (groupId,))
     result = cursor.fetchall()
     return result
+def getAllSession():
+    cursor.execute("SELECT * FROM sessions")
+    result = cursor.fetchall()
+    return result
 
 

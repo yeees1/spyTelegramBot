@@ -365,6 +365,33 @@ async def start_game_callback(callback: types.CallbackQuery):
 
     await send_turn_prompt(bot, int(groupId), fsm)
 
+@dp.message(Command("session_list"))
+async def session_list(message: types.Message):
+    if message.from_user.id != int(admin_id): return
+    dataSession = getAllSession()
+    sessionList = "list\n"
+    for el in dataSession:
+        tempText = ""
+        for info in el:
+            tempText+=f"| {info} "
+        tempText+='\n'
+        if len(sessionList) + len(tempText) > 4000:
+            await message.reply(sessionList)
+            sessionList = ""
+        sessionList+=tempText
+    await message.reply(sessionList)
+
+@dp.message(Command("dell_session"))
+async def session_list(message: types.Message):
+    if message.from_user.id != int(admin_id): return
+    args = message.text.split(maxsplit=1)
+    payload = args[1] if len(args) == 2 else None
+    if payload:
+        deleteSession(str(payload))
+        req = getSession(str(payload))
+        if not req: await message.reply("Сессия успешно удалена"); return
+        await message.reply("Попробуйте еще раз")
+
 @dp.message_reaction()
 async def on_reaction(event: types.MessageReactionUpdated):
     group_id = event.chat.id
