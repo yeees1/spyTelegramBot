@@ -44,7 +44,7 @@ async def createTables():
         PRIMARY KEY("id" AUTOINCREMENT)
     );
         """)
-    req = """CREATE TABLE IF NOT EXISTS "allusesrs" (
+    req = """CREATE TABLE IF NOT EXISTS "allusers" (
         "id"	INTEGER,
         "chat_id"	TEXT,
         "username"	TEXT,
