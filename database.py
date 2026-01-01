@@ -5,33 +5,60 @@ cursor = conn.cursor()
 
 async def createTables():
     req = """
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            group_id INTEGER UNIQUE NOT NULL,
-            group_name TEXT,
-            creator_id INTEGER NOT NULL
-        )
+    CREATE TABLE IF NOT EXISTS "sessions" (
+        "id"	INTEGER,
+        "group_id"	INTEGER NOT NULL UNIQUE,
+        "group_name"	TEXT,
+        "creator_id"	INTEGER NOT NULL,
+        "card_id"	INTEGER DEFAULT 0,
+        "votestart"	TEXT,
+        "isstart"	TEXT DEFAULT 0,
+        "spy_count"	INTEGER,
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );
         """
     cursor.execute(req)
     req = """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            chat_id INTEGER NOT NULL,
-            username TEXT,
-            telegram_name TEXT,
-            session_id INTEGER NOT NULL
-        )
-        """
+    CREATE TABLE IF NOT EXISTS "users" (
+        "id"	INTEGER,
+        "chat_id"	INTEGER NOT NULL,
+        "username"	TEXT,
+        "telegram_name"	TEXT,
+        "session_id"	INTEGER NOT NULL,
+        "votes"	INTEGER NOT NULL DEFAULT 0,
+        "isvote"	TEXT NOT NULL DEFAULT '0',
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );
+    """
     cursor.execute(req)
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            card_id INTEGER UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            image_url TEXT,
-            description TEXT
-        );
+    CREATE TABLE IF NOT EXISTS "files" (
+        "id"	INTEGER,
+        "card_id"	INTEGER NOT NULL UNIQUE,
+        "name"	TEXT NOT NULL,
+        "image_url"	TEXT,
+        "description"	TEXT,
+        "elixirCost"	INTEGER,
+        "rarity"	TEXT,
+        "is_evo"	TEXT,
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );
         """)
+    req = """CREATE TABLE IF NOT EXISTS "allusesrs" (
+        "id"	INTEGER,
+        "chat_id"	TEXT,
+        "username"	TEXT,
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );"""
+    cursor.execute(req)
+    req = """CREATE TABLE IF NOT EXISTS "spies" (
+        "id"	INTEGER,
+        "chat_id"	TEXT,
+        "username"	TEXT,
+        "group_id"	TEXT,
+        PRIMARY KEY("id" AUTOINCREMENT)
+    );"""
+    cursor.execute(req)
     conn.commit()
 
 def getSession(condition):
@@ -140,5 +167,14 @@ def getSpiesById(id):
     cursor.execute("SELECT * FROM spies WHERE id =?", (id,))
     result = cursor.fetchall()
     return result
+def insertNewUser(chatId, username):
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO allusers (chat_id, username)
+        VALUES (?, ?)
+        """,
+        (chatId, username)
+    )
+    conn.commit()
 
 

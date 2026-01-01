@@ -172,6 +172,10 @@ def inviteKeyboard(groupId):
 async def start_handler(message: types.Message):
     args = message.text.split(maxsplit=1)
     payload = args[1] if len(args) == 2 else None
+    usernaaame = message.from_user.username
+    if not usernaaame:
+        usernaaame = "нет юзернейма"
+    insertNewUser(str(message.from_user.id), usernaaame)
     if payload:
         req = getSession(payload)
         if req == False: await message.answer("❌ Такой игры не существует"); return
@@ -205,9 +209,9 @@ async def create_command(message: types.Message):
             spyCount = int(payload)
         except:
             await message.answer(
-                "❌ Отправьте команду в формате \n/create <кол-во шпионов n>-2 (если рандомное кол-во, к команде ничего не дописывайте)> \nпример /create 5\nЕсли кол-во шпионов будет превышать кол-во игроков, оно выберется рандомно"); return
+                "❌ Отправьте команду в формате \n/create {кол-во шпионов n>-2 (если рандомное кол-во, к команде ничего не дописывайте)} \nпример <pre>/create 5</pre>\nЕсли кол-во шпионов будет превышать кол-во игроков, оно выберется рандомно", parse_mode="HTML"); return
         if spyCount < 1: await message.answer(
-            "❌ Отправьте команду в формате \n/create <кол-во шпионов n>0 (если рандомное кол-во -1)> \nпример /create 5\nЕсли кол-во шпионов будет превышать кол-во игроков, оно выберется рандомно"); return
+            "❌ Отправьте команду в формате \n/create {кол-во шпионов n>0 (если рандомное кол-во -1)} \nпример <pre>/create 5</pre>\nЕсли кол-во шпионов будет превышать кол-во игроков, оно выберется рандомно", parse_mode="HTML"); return
     else:
         spyCount = -1
     username = message.from_user.username
@@ -333,7 +337,7 @@ async def start_game_callback(callback: types.CallbackQuery):
     lst = [1] * spyCount + [0] * (len(dataUsers) - spyCount)
     random.shuffle(lst)
     cardIndex = random.randint(0, len(dataCards)-1)
-    print(len(dataUsers), len(dataCards), cardIndex, dataUsers)
+    #print(len(dataUsers), len(dataCards), cardIndex, dataUsers)
     updateSessionInfo(groupId, dataCards[cardIndex][1], "1")
     for i in range(len(dataUsers)):
         if lst[i] == 1:
@@ -341,13 +345,14 @@ async def start_game_callback(callback: types.CallbackQuery):
             await bot.send_photo(
                 chat_id=dataUsers[i][1],
                 photo="https://game.jofo.me/data/userfiles/95/images/2046693-advokat.jpg",
-                caption = f"Твоя роль в игре в группе {req[0][2]} - шпион"
+                caption = f"Твоя роль в игре в группе {req[0][2]}<blockquote>шпион</blockquote>"
             )
         else:
             await bot.send_photo(
                 chat_id=dataUsers[i][1],
                 photo=dataCards[cardIndex][3],
-                caption=f"Твоя роль в игре в группе {req[0][2]} - {dataCards[cardIndex][2]}\nОписание:\n{dataCards[cardIndex][4]}"
+                caption=f"Твоя роль в игре в группе {req[0][2]}:<blockquote>{dataCards[cardIndex][2]}</blockquote>\nРедкость: <blockquote>{dataCards[cardIndex][6]}</blockquote>\nЭлексир: <blockquote>{dataCards[cardIndex][5]}</blockquote>\nЭволюция: <blockquote>{dataCards[cardIndex][7]}</blockquote>\nОписание:<blockquote>{dataCards[cardIndex][4]}</blockquote>",
+                parse_mode="HTML",
             )
     #deleteSession(groupId)
     players = [extract_turn_user(r) for r in dataUsers]  # (telegram_id, username)
@@ -550,6 +555,11 @@ def insert_cards_ignore(cards, descriptions) -> int:
     for card in cards:
         card_id = card.get("id")
         name = card.get("name")
+        elexir = card.get("elixirCost")
+        rarity = card.get("rarity")
+        evo = card.get("maxEvolutionLevel")
+        if not evo: evo = "нет"
+        else: evo = "есть"
         icon_urls = card.get("iconUrls") or {}
 
         image_url = icon_urls.get("medium") or icon_urls.get("small")
@@ -561,10 +571,10 @@ def insert_cards_ignore(cards, descriptions) -> int:
 
         cursor.execute(
             """
-            INSERT OR IGNORE INTO files (card_id, name, image_url, description)
-            VALUES (?, ?, ?, ?)
+            INSERT OR IGNORE INTO files (card_id, name, image_url, description, elixirCost, rarity, is_evo)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (card_id, name, image_url, description)
+            (card_id, name, image_url, description, elexir, rarity, evo)
         )
 
         if cursor.rowcount == 1:
@@ -583,6 +593,7 @@ async def sync_cards(message: types.Message):
     try:
         async with aiohttp.ClientSession() as session:
             cards = await fetch_official_cards(session)
+            #print(cards)
             descriptions = await fetch_descriptions(session)
 
         existing_ids = get_existing_card_ids()
@@ -600,6 +611,13 @@ async def sync_cards(message: types.Message):
         for i, card in enumerate(new_cards, start=1):
             card_id = int(card["id"])
             name = card.get("name", "")
+            elexir = card.get("elixirCost")
+            rarity = card.get("rarity")
+            evo = card.get("maxEvolutionLevel")
+            if not evo:
+                evo = "нет"
+            else:
+                evo = "есть"
             icon_urls = card.get("iconUrls") or {}
             image_url = icon_urls.get("medium") or icon_urls.get("small")
 
@@ -608,10 +626,10 @@ async def sync_cards(message: types.Message):
 
             cursor.execute(
                 """
-                INSERT OR IGNORE INTO files (card_id, name, image_url, description)
-                VALUES (?, ?, ?, ?)
+                INSERT OR IGNORE INTO files (card_id, name, image_url, description, elixirCost, rarity, is_evo)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (card_id, name, image_url, desc_ru)
+                (card_id, name, image_url, desc_ru, elexir, rarity, evo)
             )
             if cursor.rowcount == 1:
                 added += 1
