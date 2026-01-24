@@ -27,7 +27,7 @@ class DB:
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, params)
-                await conn.coomit()
+                await conn.commit()
                 return cur.rowcount
 
     async def fetchone(self, query: str, params: tuple = ()) -> Any:
