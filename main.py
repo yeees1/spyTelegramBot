@@ -276,6 +276,7 @@ async def advote_callback(callback: types.CallbackQuery):
     dataUsers = await db.getUsersFromSession(groupId)
     await db.updateVotesInSession(groupId, dataUsers[int(userIndex)][1], callback.from_user.id)
     votes, sumVotes = await db.getVotesInSession(groupId)
+    print(votes)
     if sumVotes < len(dataUsers):
         await callback.message.edit_reply_markup(
             reply_markup=voteKeyboard(dataUsers, votes, groupId)
