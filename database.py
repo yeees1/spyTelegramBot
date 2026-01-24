@@ -235,7 +235,7 @@ class DB:
         )
     async def insertNewUser(self, chat_id, username):
         await self.execute(
-            "INSERT OR IGNORE INTO allusers (chat_id, username) VALUES (%s, %s)",
+            "INSERT IGNORE INTO allusers (chat_id, username) VALUES (%s, %s)",
             (chat_id, username)
         )
 
