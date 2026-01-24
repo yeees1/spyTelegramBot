@@ -6,7 +6,7 @@ cursor = conn.cursor()
 # ===================== class DB =====================
 class DB:
     def __init__(self, host: str, port: int, user: str, password: str, db: str):
-        self._cfg = dict(host=host, port=port, user=user, passowrd=password, db=db)
+        self._cfg = dict(host=host, port=port, user=user, password=password, db=db)
         self.pool: Optional[aiomysql.Pool] = None
 
     async def connect(self):
