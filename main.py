@@ -270,13 +270,13 @@ async def advote_callback(callback: types.CallbackQuery):
     if req == False: await callback.answer("❌ Игры не существует"); return
     voteUser = await db.getUserInfoFromSession(callback.from_user.id, groupId)
     if not voteUser: await callback.answer("❌ Вы не участвуете в игре"); return
-    print(voteUser[0][6], type(voteUser[0][6]))
+
     if voteUser[0][6] == 1: await callback.answer("❌ Вы уже голосвали"); return
 
     dataUsers = await db.getUsersFromSession(groupId)
     await db.updateVotesInSession(groupId, dataUsers[int(userIndex)][1], callback.from_user.id)
     votes, sumVotes = await db.getVotesInSession(groupId)
-    print(votes)
+
     if sumVotes < len(dataUsers):
         await callback.message.edit_reply_markup(
             reply_markup=voteKeyboard(dataUsers, votes, groupId)
