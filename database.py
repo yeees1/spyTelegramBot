@@ -61,7 +61,7 @@ class DB:
                   telegram_name TEXT,
                   session_id BIGINT NOT NULL,
                   votes INT NOT NULL DEFAULT 0,
-                  isvote INT NOT NULL DEFAULT 0,
+                  isvote INT NOT NULL DEFAULT 0
                 );""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS files (
@@ -85,7 +85,7 @@ class DB:
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
                   chat_id TEXT,
                   username TEXT,
-                  group_id TEXT,
+                  group_id TEXT
                 );""")
 # ===================== main function with db =====================
     async def getSession(self, group_id):
