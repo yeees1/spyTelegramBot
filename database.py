@@ -50,7 +50,7 @@ class DB:
                   creator_id BIGINT NOT NULL,
                   card_id BIGINT DEFAULT 0,
                   votestart TEXT,
-                  isstart TEXT DEFAULT 0,
+                  isstart INT DEFAULT 0,
                   spy_count INT
                 );""")
 
@@ -61,7 +61,7 @@ class DB:
                   telegram_name TEXT,
                   session_id BIGINT NOT NULL,
                   votes INT NOT NULL DEFAULT 0,
-                  isvote TEXT NOT NULL DEFAULT 0,
+                  isvote INT NOT NULL DEFAULT 0,
                 );""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS files (

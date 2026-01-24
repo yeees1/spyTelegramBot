@@ -190,7 +190,7 @@ async def start_handler(message: types.Message):
         if req == False: await message.answer("❌ Такой игры не существует"); return
         usersCount = len(await db.getUsersFromSession(payload))
         if usersCount+1 > 30: await message.answer("❌ Достигнут лимит в 30 игроков"); return
-        if req[0][6] == "1": await message.answer("❌ Игра уже запущена"); return
+        if req[0][6] == 1: await message.answer("❌ Игра уже запущена"); return
         userId = str(message.from_user.id)
         checkUser = await db.checkUserInSession(userId, payload)
         if not checkUser:
@@ -271,7 +271,7 @@ async def advote_callback(callback: types.CallbackQuery):
     voteUser = await db.getUserInfoFromSession(callback.from_user.id, groupId)
     if not voteUser: await callback.answer("❌ Вы не участвуете в игре"); return
     print(voteUser[0][6], type(voteUser[0][6]))
-    if voteUser[0][6] == '1': await callback.answer("❌ Вы уже голосвали"); return
+    if voteUser[0][6] == 1: await callback.answer("❌ Вы уже голосвали"); return
 
     dataUsers = await db.getUsersFromSession(groupId)
     await db.updateVotesInSession(groupId, dataUsers[int(userIndex)][1], callback.from_user.id)
@@ -348,7 +348,7 @@ async def start_game_callback(callback: types.CallbackQuery):
     random.shuffle(lst)
     cardIndex = random.randint(0, len(dataCards)-1)
     #print(len(dataUsers), len(dataCards), cardIndex, dataUsers)
-    await db.updateSessionInfo(groupId, dataCards[cardIndex][1], "1")
+    await db.updateSessionInfo(groupId, dataCards[cardIndex][1], 1)
     for i in range(len(dataUsers)):
         if lst[i] == 1:
             await db.insertSpiesInfo(dataUsers[i][1], dataUsers[i][2], groupId)
