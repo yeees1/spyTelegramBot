@@ -6,7 +6,6 @@ from aiogram.filters import Command, CommandStart
 from aiogram.enums import ChatType
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Dict, Any, Optional
-import sqlite3
 import aiohttp
 from googletrans import Translator
 from aiogram import F, types
@@ -18,7 +17,7 @@ import random
 import os
 from dotenv import load_dotenv
 
-from database import *
+from database import DB
 load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -28,14 +27,24 @@ OFFICIAL_CARDS_URL = f"{CR_BASE_URL}/v1/cards"
 DESCRIPTIONS_URL = "https://royaleapi.github.io/cr-api-data/json/cards.json"
 DB_PATH = "data.db"
 admin_id = os.getenv("ADMIN_ID")
+MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
+MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
+MYSQL_DB = os.getenv("MYSQL_DB", "botdb")
+MYSQL_USER = os.getenv("MYSQL_USER", "botuser")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 translator = Translator()
 
-conn = sqlite3.connect(DB_PATH)
-cursor = conn.cursor()
+db = DB(
+    host=MYSQL_HOST,
+    port=MYSQL_PORT,
+    user=MYSQL_USER,
+    password=MYSQL_PASSWORD,
+    db=MYSQL_DB,
+)
 
 class TurnFlow(StatesGroup):
     active = State()
@@ -78,9 +87,9 @@ async def send_turn_prompt(bot, group_id: int, fsm: FSMContext):
 
     await fsm.update_data(prompt_message_id=msg.message_id, triggered=False)
 
-def get_existing_card_ids() -> set[int]:
-    cursor.execute("SELECT card_id FROM files")
-    return {row[0] for row in cursor.fetchall()}
+# def get_existing_card_ids() -> set[int]:
+#     cursor.execute("SELECT card_id FROM files")
+#     return {row[0] for row in cursor.fetchall()}
 
 
 async def translate_ru(text: str) -> str:
@@ -175,19 +184,19 @@ async def start_handler(message: types.Message):
     usernaaame = message.from_user.username
     if not usernaaame:
         usernaaame = "нет юзернейма"
-    insertNewUser(str(message.from_user.id), usernaaame)
+    await db.insertNewUser(str(message.from_user.id), usernaaame)
     if payload:
-        req = getSession(payload)
+        req = await db.getSession(payload)
         if req == False: await message.answer("❌ Такой игры не существует"); return
-        usersCount = len(getUsersFromSession(payload))
+        usersCount = len(await db.getUsersFromSession(payload))
         if usersCount+1 > 30: await message.answer("❌ Достигнут лимит в 30 игроков"); return
         if req[0][6] == "1": await message.answer("❌ Игра уже запущена"); return
         userId = str(message.from_user.id)
-        checkUser = checkUserInSession(userId, payload)
+        checkUser = await db.checkUserInSession(userId, payload)
         if not checkUser:
             username = message.from_user.username
             if not username: username = "юзернейма нет"
-            insertUserInSession(userId, username, message.from_user.full_name, payload)
+            await db.insertUserInSession(userId, username, message.from_user.full_name, payload)
             await message.answer("✅ Вы принимаете участие в игре")
             return
         await message.answer("❌ Вы уже участвуете")
@@ -218,11 +227,11 @@ async def create_command(message: types.Message):
     groupId = str(message.chat.id)
     groupName = str(message.chat.full_name)
     creatorId = str(message.from_user.id)
-    req = getSession(groupId)
+    req = await db.getSession(groupId)
     if req != False: await message.answer("❌ В группе уже создана игра"); return
     await message.answer(f"Пользователь {message.from_user.full_name} создал игру\n", reply_markup= inviteKeyboard(groupId), parse_mode="HTML")
-    insertSession(groupId, groupName, creatorId, spyCount)
-    insertUserInSession(creatorId, username, message.from_user.full_name, groupId)
+    await db.insertSession(groupId, groupName, creatorId, spyCount)
+    await db.insertUserInSession(creatorId, username, message.from_user.full_name, groupId)
     listUsers = f"1. {message.from_user.full_name} | {mention(int(creatorId), message.from_user.username)} | {creatorId}"
 
     await bot.send_message(
@@ -240,14 +249,14 @@ async def create_command(message: types.Message):
 @dp.message(Command("vote"))
 async def vote_command(message: types.Message):
     groupId = message.chat.id
-    req = getSession(groupId)
-    isUserInSession = getUserInfoFromSession(message.from_user.id, groupId)
+    req = await db.getSession(groupId)
+    isUserInSession = await db.getUserInfoFromSession(message.from_user.id, groupId)
     if not isUserInSession: return
     if req == False: await message.answer("❌ Игры не существует"); return
     if req[0][5] == '1': await message.answer("❌ Голосование уже создано"); return
-    dataUsers = getUsersFromSession(groupId)
-    votes, sumVotes =getVotesInSession(groupId)
-    updateVoteStatus(str(groupId), "1")
+    dataUsers = await db.getUsersFromSession(groupId)
+    votes, sumVotes = await db.getVotesInSession(groupId)
+    await db.updateVoteStatus(str(groupId), "1")
 
     await message.answer("Голосование:", reply_markup=voteKeyboard(dataUsers, votes, groupId))
 
@@ -257,21 +266,21 @@ async def advote_callback(callback: types.CallbackQuery):
     data = callback.data.split("_")
     userIndex = data[1]
     groupId = data[2]
-    req = getSession(groupId)
+    req = await db.getSession(groupId)
     if req == False: await callback.answer("❌ Игры не существует"); return
-    voteUser = getUserInfoFromSession(callback.from_user.id, groupId)
+    voteUser = await db.getUserInfoFromSession(callback.from_user.id, groupId)
     if not voteUser: await callback.answer("❌ Вы не участвуете в игре"); return
     if voteUser[0][6] == '1': await callback.answer("❌ Вы уже голосвали"); return
 
-    dataUsers = getUsersFromSession(groupId)
-    updateVotesInSession(groupId, dataUsers[int(userIndex)][1], callback.from_user.id)
-    votes, sumVotes = getVotesInSession(groupId)
+    dataUsers = await db.getUsersFromSession(groupId)
+    await db.updateVotesInSession(groupId, dataUsers[int(userIndex)][1], callback.from_user.id)
+    votes, sumVotes = await db.getVotesInSession(groupId)
     if sumVotes < len(dataUsers):
         await callback.message.edit_reply_markup(
             reply_markup=voteKeyboard(dataUsers, votes, groupId)
         )
     else:
-        dataUsers = getUsersFromSession(groupId)
+        dataUsers = await db.getUsersFromSession(groupId)
         listVotes = ""
         for el in dataUsers:
             username = el[2]
@@ -281,13 +290,13 @@ async def advote_callback(callback: types.CallbackQuery):
         # spy_username = spy_data[0][2]
         # if not spy_username: spy_username = spy_data[0][3]
         spyList = ""
-        dataSpies = getSpies(groupId)
+        dataSpies = await db.getSpies(groupId)
         for el in dataSpies:
             spyList += f"{mention(int(el[1]), el[2])}\n"
         await callback.message.edit_text("Голосование окончено\n" + listVotes + f"Шпионы:\n"+spyList)
-        cardData = getPhoto(req[0][4])
+        cardData = await db.getPhoto(req[0][4])
         await bot.send_photo(chat_id=groupId, photo=cardData[3], caption="Загаданная карта - " + cardData[2])
-        deleteSession(groupId)
+        await db.deleteSession(groupId)
         fsm = group_fsm(dp, bot, int(groupId))
         await fsm.clear()
         await bot.send_message(
@@ -301,9 +310,9 @@ async def advote_callback(callback: types.CallbackQuery):
 async def refresh_list_callback(callback: types.CallbackQuery):
     groupId = callback.data.split("_")[2]
     listUsers = "\n"
-    req = getSession(groupId)
+    req = await db.getSession(groupId)
     if req == False: await callback.answer("❌ Игры не существует"); return
-    dataUsers = getUsersFromSession(groupId)
+    dataUsers = await db.getUsersFromSession(groupId)
     oldText = callback.message.text
     for i in range(len(dataUsers)):
 
@@ -326,11 +335,11 @@ async def start_game_callback(callback: types.CallbackQuery):
     creatorId = calldata[3]
     if creatorId != str(callback.from_user.id): await callback.answer("❌ Запустить игру может только создатель", show_alert=True); return
     await callback.message.edit_reply_markup(reply_markup=cancelKeyboard(groupId, "0"))
-    req = getSession(groupId)
+    req = await db.getSession(groupId)
     if req == False: await callback.answer("❌ Такой игры не существует", show_alert=True); return
     await callback.answer()
-    dataUsers = getUsersFromSession(groupId)
-    dataCards = getInfoFiles()
+    dataUsers = await db.getUsersFromSession(groupId)
+    dataCards = await db.getInfoFiles()
     spyCount = req[0][7]
     if spyCount >= len(dataUsers) or spyCount == -1:
         spyCount = generateSpyCount(len(dataUsers))
@@ -338,10 +347,10 @@ async def start_game_callback(callback: types.CallbackQuery):
     random.shuffle(lst)
     cardIndex = random.randint(0, len(dataCards)-1)
     #print(len(dataUsers), len(dataCards), cardIndex, dataUsers)
-    updateSessionInfo(groupId, dataCards[cardIndex][1], "1")
+    await db.updateSessionInfo(groupId, dataCards[cardIndex][1], "1")
     for i in range(len(dataUsers)):
         if lst[i] == 1:
-            insertSpiesInfo(dataUsers[i][1], dataUsers[i][2], groupId)
+            await db.insertSpiesInfo(dataUsers[i][1], dataUsers[i][2], groupId)
             await bot.send_photo(
                 chat_id=dataUsers[i][1],
                 photo="https://game.jofo.me/data/userfiles/95/images/2046693-advokat.jpg",
@@ -373,7 +382,7 @@ async def start_game_callback(callback: types.CallbackQuery):
 @dp.message(Command("session_list"))
 async def session_list(message: types.Message):
     if message.from_user.id != int(admin_id): return
-    dataSession = getAllSession()
+    dataSession = await db.getAllSession()
     sessionList = "list\n"
     for el in dataSession:
         tempText = ""
@@ -389,7 +398,7 @@ async def session_list(message: types.Message):
 @dp.message(Command("users_list"))
 async def users_list(message: types.Message):
     if message.from_user.id != int(admin_id): return
-    dataUsers = getAllUsers()
+    dataUsers = await db.getAllUsers()
     usersList = "list\n"
     for el in dataUsers:
         tempText = ""
@@ -408,15 +417,15 @@ async def session_list(message: types.Message):
     args = message.text.split(maxsplit=1)
     payload = args[1] if len(args) == 2 else None
     if payload:
-        delUserById(payload)
-        req = getUserById(payload)
+        await db.delUserById(payload)
+        req = await db.getUserById(payload)
         if not req: await message.reply("Пользователь успешно удален"); return
         await message.reply("Попробуйте еще раз")
 
 @dp.message(Command("spy_list"))
 async def spy_list(message: types.Message):
     if message.from_user.id != int(admin_id): return
-    dataUsers = getAllSpies()
+    dataUsers = await db.getAllSpies()
     usersList = "list\n"
     for el in dataUsers:
         tempText = ""
@@ -435,8 +444,8 @@ async def spy_list(message: types.Message):
     args = message.text.split(maxsplit=1)
     payload = args[1] if len(args) == 2 else None
     if payload:
-        delSpiesById(payload)
-        req = getSpiesById(payload)
+        await db.delSpiesById(payload)
+        req = await db.getSpiesById(payload)
         if not req: await message.reply("Пользователь успешно удален"); return
         await message.reply("Попробуйте еще раз")
 @dp.message(Command("dell_session"))
@@ -445,8 +454,8 @@ async def session_list(message: types.Message):
     args = message.text.split(maxsplit=1)
     payload = args[1] if len(args) == 2 else None
     if payload:
-        deleteSession(str(payload))
-        req = getSession(str(payload))
+        await db.deleteSession(str(payload))
+        req = await db.getSession(str(payload))
         if not req: await message.reply("Сессия успешно удалена"); return
         await message.reply("Попробуйте еще раз")
 
@@ -492,12 +501,12 @@ async def cancel_callback(callback: types.CallbackQuery):
     groupId = calldata[1]
     voteflag = calldata[2]
     listVotes = ""
-    isUserInSession = getUserInfoFromSession(callback.from_user.id, groupId)
+    isUserInSession = await db.getUserInfoFromSession(callback.from_user.id, groupId)
     if not isUserInSession: await callback.answer("❌ Вы не являетесь участником игры", show_alert=True); return
-    req = getSession(groupId)
+    req = await db.getSession(groupId)
     if req == False: print(req, groupId); await callback.message.answer("❌ Такой игры не существует"); return
     if voteflag == "1":
-        dataUsers = getUsersFromSession(groupId)
+        dataUsers = await db.getUsersFromSession(groupId)
         for el in dataUsers:
             username = el[2]
             if not username: username = el[3]
@@ -506,13 +515,13 @@ async def cancel_callback(callback: types.CallbackQuery):
     # spy_username = spy_data[0][2]
     # if not spy_username: spy_username = spy_data[0][3]
     await callback.message.edit_text("🛑 Игра окончена\n" + listVotes)
-    cardData = getPhoto(req[0][4])
+    cardData = await db.getPhoto(req[0][4])
     spyList = ""
-    dataSpies = getSpies(groupId)
+    dataSpies = await db.getSpies(groupId)
     for el in dataSpies:
         spyList+=f"{mention(int(el[1]), el[2])}\n"
     await bot.send_photo(chat_id=groupId, photo=cardData[3], caption="Загаданная карта - " + cardData[2] + f"\nШпионы:\n" + spyList)
-    deleteSession(groupId)
+    await db.deleteSession(groupId)
     fsm = group_fsm(dp, bot, int(groupId))
     await fsm.clear()
     # await bot.send_message(
@@ -548,40 +557,40 @@ async def fetch_descriptions(session: aiohttp.ClientSession) -> Dict[int, str]:
         if "id" in card
     }
 
-
-def insert_cards_ignore(cards, descriptions) -> int:
-    added = 0
-
-    for card in cards:
-        card_id = card.get("id")
-        name = card.get("name")
-        elexir = card.get("elixirCost")
-        rarity = card.get("rarity")
-        evo = card.get("maxEvolutionLevel")
-        if not evo: evo = "нет"
-        else: evo = "есть"
-        icon_urls = card.get("iconUrls") or {}
-
-        image_url = icon_urls.get("medium") or icon_urls.get("small")
-        raw_description = descriptions.get(int(card_id), "")
-        description = translate_description(raw_description)
-
-        if not card_id or not name:
-            continue
-
-        cursor.execute(
-            """
-            INSERT OR IGNORE INTO files (card_id, name, image_url, description, elixirCost, rarity, is_evo)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (card_id, name, image_url, description, elexir, rarity, evo)
-        )
-
-        if cursor.rowcount == 1:
-            added += 1
-
-    conn.commit()
-    return added
+#
+# def insert_cards_ignore(cards, descriptions) -> int:
+#     added = 0
+#
+#     for card in cards:
+#         card_id = card.get("id")
+#         name = card.get("name")
+#         elexir = card.get("elixirCost")
+#         rarity = card.get("rarity")
+#         evo = card.get("maxEvolutionLevel")
+#         if not evo: evo = "нет"
+#         else: evo = "есть"
+#         icon_urls = card.get("iconUrls") or {}
+#
+#         image_url = icon_urls.get("medium") or icon_urls.get("small")
+#         raw_description = descriptions.get(int(card_id), "")
+#         description = translate_description(raw_description)
+#
+#         if not card_id or not name:
+#             continue
+#
+#         cursor.execute(
+#             """
+#             INSERT OR IGNORE INTO files (card_id, name, image_url, description, elixirCost, rarity, is_evo)
+#             VALUES (?, ?, ?, ?, ?, ?, ?)
+#             """,
+#             (card_id, name, image_url, description, elexir, rarity, evo)
+#         )
+#
+#         if cursor.rowcount == 1:
+#             added += 1
+#
+#     conn.commit()
+#     return added
 
 
 
@@ -596,7 +605,7 @@ async def sync_cards(message: types.Message):
             #print(cards)
             descriptions = await fetch_descriptions(session)
 
-        existing_ids = get_existing_card_ids()
+        existing_ids = await db.get_existing_card_ids()
         new_cards = [c for c in cards if c.get("id") not in existing_ids]
 
         await status_msg.edit_text(
@@ -607,7 +616,7 @@ async def sync_cards(message: types.Message):
 
         added = 0
         total = len(new_cards)
-
+        cardslist = []
         for i, card in enumerate(new_cards, start=1):
             card_id = int(card["id"])
             name = card.get("name", "")
@@ -624,25 +633,12 @@ async def sync_cards(message: types.Message):
             raw_desc = descriptions.get(card_id, "")
             desc_ru = await translate_ru(raw_desc)
 
-            cursor.execute(
-                """
-                INSERT OR IGNORE INTO files (card_id, name, image_url, description, elixirCost, rarity, is_evo)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (card_id, name, image_url, desc_ru, elexir, rarity, evo)
-            )
-            if cursor.rowcount == 1:
-                added += 1
+            cardslist.append(["""
+                INSERT IGNORE INTO files (card_id, name, image_url, description, elixirCost, rarity, is_evo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (card_id, name, image_url, desc_ru, elexir, rarity, evo)])
 
-            # обновляем прогресс каждые 10 карт (или на последней)
-            if i % 10 == 0 or i == total:
-                await status_msg.edit_text(
-                    f"🆕 Добавляю новые карты: {i}/{total}\n"
-                    f"✅ Уже добавлено: {added}"
-                )
-
-        conn.commit()
-
+        await db.insert_new_cards(cardslist, total, status_msg)
         await status_msg.edit_text(
             f"✅ Готово!\n"
             f"Всего карт из API: {len(cards)}\n"
@@ -662,10 +658,15 @@ async def sync_cards(message: types.Message):
 
 
 async def main():
+    await db.connect()
+    await db.createTables()
     await dp.start_polling(bot)
-
+    dp["db"] = db
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await db.close()
 
 if __name__ == "__main__":
-    asyncio.run(createTables())
     asyncio.run(main())
 
