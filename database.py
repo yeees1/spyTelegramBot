@@ -49,10 +49,10 @@ class DB:
                   group_name TEXT,
                   creator_id BIGINT NOT NULL,
                   card_id BIGINT DEFAULT 0,
-                  votestart TINYINT(1) DEFAULT 0,
-                  isstart TINYINT(1) DEFAULT 0,
+                  votestart TEXT,
+                  isstart TEXT DEFAULT 0,
                   spy_count INT
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;""")
+                );""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS users (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -61,10 +61,8 @@ class DB:
                   telegram_name TEXT,
                   session_id BIGINT NOT NULL,
                   votes INT NOT NULL DEFAULT 0,
-                  isvote TINYINT(1) NOT NULL DEFAULT 0,
-                  INDEX idx_users_session (session_id),
-                  INDEX idx_users_session_chat (session_id, chat_id)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;""")
+                  isvote TEXT NOT NULL DEFAULT 0,
+                );""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS files (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -75,21 +73,20 @@ class DB:
                   elixirCost INT,
                   rarity TEXT,
                   is_evo TEXT
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;""")
+                );""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS allusers (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  chat_id BIGINT UNIQUE,
+                  chat_id TEXT,
                   username TEXT
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;""")
+                );""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS spies (
                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  chat_id BIGINT,
+                  chat_id TEXT,
                   username TEXT,
-                  group_id BIGINT,
-                  INDEX idx_spies_group (group_id)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;""")
+                  group_id TEXT,
+                );""")
 # ===================== main function with db =====================
     async def getSession(self, group_id):
         rows = await self.fetchall(
