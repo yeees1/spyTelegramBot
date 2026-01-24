@@ -74,7 +74,7 @@ class DB:
                   description TEXT,
                   elixirCost INT,
                   rarity TEXT,
-                  is_evo TINYINT(1)
+                  is_evo TEXT
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;""")
 
         await self.execute("""CREATE TABLE IF NOT EXISTS allusers (
