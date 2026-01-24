@@ -248,7 +248,7 @@ class DB:
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 for i in range(len(cardslist)):
-                    rowcount = self.execute(cardslist[i][0], cardslist[i][1])
+                    rowcount = await self.execute(cardslist[i][0], cardslist[i][1])
                     if rowcount == 1:
                         added += 1
                     if i % 10 == 0 or i == total:
