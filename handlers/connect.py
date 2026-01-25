@@ -9,11 +9,21 @@ router = Router()
 
 async def check_permissions(bot: Bot, chat_id: int):
     try:
+        can_send_messages = True
+        can_send_photos = True
         me = await bot.get_me()
         member = await bot.get_chat_member(chat_id, me.id)
         if member.status != ChatMemberStatus.ADMINISTRATOR:
             return [False, {}]
-        return [member.can_send_messages and member.can_manage_chat and member.can_send_photos, {"Отправка сообщений": member.can_send_messages,"manage_chat": member.can_manage_chat,"Отправка фото": member.can_send_photos}]
+        try:
+            await bot.send_message(chat_id, "TEST")
+        except:
+            can_send_messages = False
+        try:
+            await bot.send_photo(chat_id, "https://yandex.ru/images/search?pos=8&from=tabbar&img_url=https%3A%2F%2Finvestvolga.volgograd.ru%2Fupload%2Fiblock%2F7b9%2FTest_Logo_Circle_black_transparent.png&text=test&rpt=simage&lr=10716")
+        except:
+            can_send_photos = False
+        return [can_send_messages and member.can_manage_chat and can_send_photos, {"Отправка сообщений": can_send_messages,"manage_chat": member.can_manage_chat,"Отправка фото": can_send_photos}]
     except TelegramForbiddenError:
         return [False, {}]
     except Exception as e:
