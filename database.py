@@ -85,7 +85,7 @@ class DB:
                   group_id TEXT
                 );""")
 
-        await self.execute("""CREATE TABLE IF NOT EXISTS groups (
+        await self.execute("""CREATE TABLE IF NOT EXISTS `groups` (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
             group_id BIGINT NOT NULL UNIQUE
         );""")
