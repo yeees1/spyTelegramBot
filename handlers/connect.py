@@ -33,7 +33,7 @@ async def check_administrator(bot: Bot, chat_id: int):
 
 @router.message(Command("connect"))
 async def connect(message: types.Message, db: DB, bot: Bot):
-    data = db.getGroupInfo(message.chat.id)
+    data = await db.getGroupInfo(message.chat.id)
     permissionData = await check_permissions(bot, message.chat.id)
     administratorFlag = await check_administrator(bot, message.chat.id)
     if data == True and permissionData[0] == True and administratorFlag == True: await message.answer("✅ Группа уже привязана, бот - администратор с нужными правами"); return
