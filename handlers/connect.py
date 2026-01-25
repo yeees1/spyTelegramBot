@@ -20,7 +20,7 @@ async def check_permissions(bot: Bot, chat_id: int):
         except:
             can_send_messages = False
         try:
-            await bot.send_photo(chat_id, "https://yandex.ru/images/search?pos=8&from=tabbar&img_url=https%3A%2F%2Finvestvolga.volgograd.ru%2Fupload%2Fiblock%2F7b9%2FTest_Logo_Circle_black_transparent.png&text=test&rpt=simage&lr=10716")
+            await bot.send_photo(chat_id, "https://investvolga.volgograd.ru/upload/iblock/7b9/Test_Logo_Circle_black_transparent.png")
         except:
             can_send_photos = False
         return [can_send_messages and member.can_manage_chat and can_send_photos, {"Отправка сообщений": can_send_messages,"manage_chat": member.can_manage_chat,"Отправка фото": can_send_photos}]
