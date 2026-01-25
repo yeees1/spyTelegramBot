@@ -77,11 +77,14 @@ async def connect(message: types.Message, db: DB, bot: Bot):
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
         answerText += "После выполения условий воспользуйтесь командой /connect или запустите игру"
-        print(permissionData[1])
-        if permissionData[1]["Отправка сообщений"] == False:
-            await bot.send_message(message.from_user.id, answerText)
-            return
-        await message.answer(answerText)
+
+        try:
+            if permissionData[1]["Отправка сообщений"] == False:
+                await bot.send_message(message.from_user.id, answerText)
+                return
+            await message.answer(answerText)
+        except:
+            print(permissionData[1])
 
 
 
