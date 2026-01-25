@@ -9,6 +9,7 @@ from database import DB
 from utils.mention import mention, extract_turn_user
 from keyboards.game import inviteKeyboard, voteKeyboard, creatorKeyboard, cancelKeyboard
 from services.turn_flow import group_fsm, send_turn_prompt, TurnFlow
+from handlers.connect import check_permissions, check_administrator
 
 router = Router()
 
@@ -17,6 +18,30 @@ async def create_command(message: types.Message, bot: Bot, db: DB):
     if message.chat.type == ChatType.PRIVATE:
         await message.answer("❌ Бот используется только в группе")
         return
+    dataGroup = await db.getGroupInfo(message.chat.id)
+    permissionData = await check_permissions(bot, message.chat.id)
+    administratorFlag = await check_administrator(bot, message.chat.id)
+    if dataGroup != False and permissionData[0]!=True:
+        await db.deleteGroup(message.chat.id)
+        answerText = "Отключенные парва:\n"
+        for el in permissionData[1].keys():
+            if permissionData[1][el] == False:
+                answerText += f"{el}\n"
+        answerText += f"Наличие роли администратора {administratorFlag}\n❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
+        await message.answer(answerText)
+        return
+    if dataGroup == False:
+        if permissionData[0] == True and administratorFlag == True:
+            await db.insertGroup(message.chat.id)
+            await message.answer("✅ Группа привязана")
+        else:
+            answerText = f"❌ Группа не привязана!\nНаличие роли администратора {administratorFlag}\nОтключенные парва:\n"
+            for el in permissionData[1].keys():
+                if permissionData[1][el] == False:
+                    answerText += f"{el}\n"
+            answerText += "После выполения условий воспользуйтесь командой /connect или запустите игру"
+            await message.answer(answerText)
+            return
     try: await bot.send_message(message.from_user.id, "Создание игры...")
     except: await message.answer("У создателя должен быть запущен бот"); return
     args = message.text.split(maxsplit=1)

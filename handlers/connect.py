@@ -1,7 +1,7 @@
 from http.client import CannotSendRequest
 
 from aiogram import Bot, Router, types
-from aiogram.enums import ChatMemberStatus
+from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import Command
 
@@ -35,6 +35,9 @@ async def check_administrator(bot: Bot, chat_id: int):
 
 @router.message(Command("connect"))
 async def connect(message: types.Message, db: DB, bot: Bot):
+    if message.chat.type == ChatType.PRIVATE:
+        await message.answer("❌ Бот используется только в группе")
+        return
     data = await db.getGroupInfo(message.chat.id)
     permissionData = await check_permissions(bot, message.chat.id)
     administratorFlag = await check_administrator(bot, message.chat.id)
@@ -45,7 +48,7 @@ async def connect(message: types.Message, db: DB, bot: Bot):
         for el in permissionData[1].keys():
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
-        answerText += f"Наличие роил администратора {administratorFlag}\n❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
+        answerText += f"Наличие роли администратора {administratorFlag}\n❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
         await message.answer(answerText)
         return
     if data == False:
@@ -53,7 +56,7 @@ async def connect(message: types.Message, db: DB, bot: Bot):
             await db.insertGroup(message.chat.id)
             await message.answer("✅ Группа привязана")
             return
-        answerText = f"❌ Группа не привязана!\nНаличие роил администратора {administratorFlag}\nОтключенные парва:\n"
+        answerText = f"❌ Группа не привязана!\nНаличие роли администратора {administratorFlag}\nОтключенные парва:\n"
         for el in permissionData[1].keys():
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
