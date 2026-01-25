@@ -15,8 +15,6 @@ async def check_permissions(bot: Bot, chat_id: int):
         can_send_photos = True
         me = await bot.get_me()
         member = await bot.get_chat_member(chat_id, me.id)
-        if member.status != ChatMemberStatus.ADMINISTRATOR:
-            return [False, {}]
         try:
             await bot.send_message(chat_id, "TEST")
         except:
