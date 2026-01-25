@@ -46,8 +46,8 @@ async def connect(message: types.Message, db: DB, bot: Bot):
     data = await db.getGroupInfo(message.chat.id)
     permissionData = await check_permissions(bot, message.chat.id)
     administratorFlag = await check_administrator(bot, message.chat.id)
-    if data == True and permissionData[0] == True and administratorFlag == True: await message.answer("✅ Группа уже привязана, бот - администратор с нужными правами"); return
-    if data == True:
+    if data != False and permissionData[0] == True and administratorFlag == True: await message.answer("✅ Группа уже привязана, бот - администратор с нужными правами"); return
+    if data != False:
         await db.deleteGroup(message.chat.id)
         answerText = "Отключенные парва:\n"
         for el in permissionData[1].keys():
@@ -57,7 +57,7 @@ async def connect(message: types.Message, db: DB, bot: Bot):
         answerText += f"Наличие роил администратора {administratorFlag}❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
         await message.answer(answerText)
         return
-    if data != True:
+    if data == False:
         if permissionData[0] == True and administratorFlag == True:
             await db.insertGroup(message.chat.id)
             await message.answer("✅ Группа привязана")
