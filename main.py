@@ -12,6 +12,7 @@ from handlers.admin import router as admin_router
 from handlers.game import router as game_router
 from handlers.sync_cards import router as sync_router
 from services.turn_flow import router as turn_flow_router
+from handlers.connect import router as connect_router
 
 
 
@@ -34,6 +35,7 @@ async def main():
     dp.include_router(game_router)
     dp.include_router(sync_router)
     dp.include_router(turn_flow_router)
+    dp.include_router(connect_router)
 
     await bot.delete_webhook(drop_pending_updates=True)
 
