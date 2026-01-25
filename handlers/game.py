@@ -21,7 +21,7 @@ async def create_command(message: types.Message, bot: Bot, db: DB):
     dataGroup = await db.getGroupInfo(message.chat.id)
     permissionData = await check_permissions(bot, message.chat.id)
     administratorFlag = await check_administrator(bot, message.chat.id)
-    if dataGroup != False and permissionData[0]!=True:
+    if (dataGroup != False and permissionData[0]!=True) or (dataGroup != False and administratorFlag!=True):
         await db.deleteGroup(message.chat.id)
         answerText = "Отключенные парва:\n"
         for el in permissionData[1].keys():
