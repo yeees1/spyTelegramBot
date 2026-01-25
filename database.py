@@ -84,6 +84,12 @@ class DB:
                   username TEXT,
                   group_id TEXT
                 );""")
+
+        await self.execute("""CREATE TABLE TABLE IF NOT EXISTS groups (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            group_id BIGINT NOT NULL UNIQUE
+        );""")
+
 # ===================== main function with db =====================
     async def getSession(self, group_id):
         rows = await self.fetchall(
