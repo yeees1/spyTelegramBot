@@ -17,7 +17,8 @@ async def check_permissions(bot: Bot, chat_id: int):
     if member.status == ChatMemberStatus.ADMINISTRATOR:
         can_manage_chat =  member.can_manage_chat
     try:
-        await bot.send_photo(chat_id, "https://investvolga.volgograd.ru/upload/iblock/7b9/Test_Logo_Circle_black_transparent.png")
+        mes = await bot.send_photo(chat_id, "https://investvolga.volgograd.ru/upload/iblock/7b9/Test_Logo_Circle_black_transparent.png")
+        await bot.delete_message(chat_id, mes.message_id)
     except:
         can_send_photos = False
     return [can_manage_chat and can_send_photos, {"manage_chat": can_manage_chat,"Отправка фото": can_send_photos}]
