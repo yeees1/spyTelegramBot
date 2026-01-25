@@ -10,20 +10,17 @@ from database import DB
 router = Router()
 
 async def check_permissions(bot: Bot, chat_id: int):
-
-    can_send_messages = True
     can_send_photos = True
     me = await bot.get_me()
+    can_manage_chat = False
     member = await bot.get_chat_member(chat_id, me.id)
-    try:
-        await bot.send_message(chat_id, "TEST")
-    except:
-        can_send_messages = False
+    if member.status == ChatMemberStatus.ADMINISTRATOR:
+        can_manage_chat =  member.can_manage_chat
     try:
         await bot.send_photo(chat_id, "https://investvolga.volgograd.ru/upload/iblock/7b9/Test_Logo_Circle_black_transparent.png")
     except:
         can_send_photos = False
-    return [can_send_messages and member.can_manage_chat and can_send_photos, {"Отправка сообщений": can_send_messages,"manage_chat": member.can_manage_chat,"Отправка фото": can_send_photos}]
+    return [member.can_manage_chat and can_send_photos, {"manage_chat": can_manage_chat,"Отправка фото": can_send_photos}]
 
 async def check_administrator(bot: Bot, chat_id: int):
     try:
@@ -38,11 +35,6 @@ async def check_administrator(bot: Bot, chat_id: int):
 
 @router.message(Command("connect"))
 async def connect(message: types.Message, db: DB, bot: Bot):
-    try:
-        await bot.send_message(message.from_user.id, 'TEST')
-    except:
-        await message.answer("Необходимо запустить бота в лс")
-        return
     data = await db.getGroupInfo(message.chat.id)
     permissionData = await check_permissions(bot, message.chat.id)
     administratorFlag = await check_administrator(bot, message.chat.id)
@@ -53,11 +45,7 @@ async def connect(message: types.Message, db: DB, bot: Bot):
         for el in permissionData[1].keys():
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
-
         answerText += f"Наличие роил администратора {administratorFlag}\n❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
-        if permissionData[1]["Отправка сообщений"] == False:
-            await bot.send_message(message.from_user.id, answerText)
-            return
         await message.answer(answerText)
         return
     if data == False:
@@ -70,14 +58,7 @@ async def connect(message: types.Message, db: DB, bot: Bot):
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
         answerText += "После выполения условий воспользуйтесь командой /connect или запустите игру"
-
-        try:
-            if permissionData[1]["Отправка сообщений"] == False:
-                await bot.send_message(message.from_user.id, answerText)
-                return
-            await message.answer(answerText)
-        except:
-            print(permissionData[1])
+        await message.answer(answerText)
 
 
 
