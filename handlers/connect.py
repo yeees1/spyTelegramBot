@@ -54,7 +54,7 @@ async def connect(message: types.Message, db: DB, bot: Bot):
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
 
-        answerText += f"Наличие роил администратора {administratorFlag}❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
+        answerText += f"Наличие роил администратора {administratorFlag}\n❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
         await message.answer(answerText)
         return
     if data == False:
