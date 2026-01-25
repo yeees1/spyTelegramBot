@@ -1,6 +1,8 @@
 .env
-arh.zip
-spy.jpg
+musor/
+musor/arh.zip
+musor/spy.jpg
+*.zip
 .idea/
 __pycache__/
 *.pyc

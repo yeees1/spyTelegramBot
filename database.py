@@ -1,8 +1,5 @@
-import sqlite3
 import aiomysql
 from typing import Any, Optional
-conn = sqlite3.connect("data.db")
-cursor = conn.cursor()
 # ===================== class DB =====================
 class DB:
     def __init__(self, host: str, port: int, user: str, password: str, db: str):
@@ -245,7 +242,7 @@ class DB:
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 for i in range(len(cardslist)):
-                    rowcount = await self.execute(cardslist[i][0], cardslist[i][1])
+                    rowcount = await cur.execute(cardslist[i][0], cardslist[i][1])
                     if rowcount == 1:
                         added += 1
                     if i % 10 == 0 or i == total:
@@ -254,3 +251,4 @@ class DB:
                             f"✅ Уже добавлено: {added}"
                         )
             await conn.commit()
+        return added
