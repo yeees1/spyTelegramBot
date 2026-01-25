@@ -10,25 +10,20 @@ from database import DB
 router = Router()
 
 async def check_permissions(bot: Bot, chat_id: int):
+
+    can_send_messages = True
+    can_send_photos = True
+    me = await bot.get_me()
+    member = await bot.get_chat_member(chat_id, me.id)
     try:
-        can_send_messages = True
-        can_send_photos = True
-        me = await bot.get_me()
-        member = await bot.get_chat_member(chat_id, me.id)
-        try:
-            await bot.send_message(chat_id, "TEST")
-        except:
-            can_send_messages = False
-        try:
-            await bot.send_photo(chat_id, "https://investvolga.volgograd.ru/upload/iblock/7b9/Test_Logo_Circle_black_transparent.png")
-        except:
-            can_send_photos = False
-        return [can_send_messages and member.can_manage_chat and can_send_photos, {"Отправка сообщений": can_send_messages,"manage_chat": member.can_manage_chat,"Отправка фото": can_send_photos}]
-    except TelegramForbiddenError:
-        return [False, {}]
-    except Exception as e:
-        print(f"[check_permissions] error: {e}")
-        return [False, {}]
+        await bot.send_message(chat_id, "TEST")
+    except:
+        can_send_messages = False
+    try:
+        await bot.send_photo(chat_id, "https://investvolga.volgograd.ru/upload/iblock/7b9/Test_Logo_Circle_black_transparent.png")
+    except:
+        can_send_photos = False
+    return [can_send_messages and member.can_manage_chat and can_send_photos, {"Отправка сообщений": can_send_messages,"manage_chat": member.can_manage_chat,"Отправка фото": can_send_photos}]
 
 async def check_administrator(bot: Bot, chat_id: int):
     try:
