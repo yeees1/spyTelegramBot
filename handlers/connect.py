@@ -1,3 +1,5 @@
+from http.client import CannotSendRequest
+
 from aiogram import Bot, Router, types
 from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramForbiddenError
@@ -43,6 +45,11 @@ async def check_administrator(bot: Bot, chat_id: int):
 
 @router.message(Command("connect"))
 async def connect(message: types.Message, db: DB, bot: Bot):
+    try:
+        await bot.send_message(message.from_user.id, 'TEST')
+    except:
+        await message.answer("Необходимо запустить бота в лс")
+        return
     data = await db.getGroupInfo(message.chat.id)
     permissionData = await check_permissions(bot, message.chat.id)
     administratorFlag = await check_administrator(bot, message.chat.id)
@@ -55,6 +62,9 @@ async def connect(message: types.Message, db: DB, bot: Bot):
                 answerText += f"{el}\n"
 
         answerText += f"Наличие роил администратора {administratorFlag}\n❌ Привязка группы удалена до восстановления прав.\nПосле выполения условий воспользуйтесь командой /connect или запустите игру"
+        if permissionData[1]["Отправка сообщений"] == False:
+            await bot.send_message(message.from_user.id, answerText)
+            return
         await message.answer(answerText)
         return
     if data == False:
@@ -67,6 +77,10 @@ async def connect(message: types.Message, db: DB, bot: Bot):
             if permissionData[1][el] == False:
                 answerText += f"{el}\n"
         answerText += "После выполения условий воспользуйтесь командой /connect или запустите игру"
+        if permissionData[1]["Отправка сообщений"] == False:
+            await bot.send_message(message.from_user.id, answerText)
+            return
+        await message.answer(answerText)
 
 
 
