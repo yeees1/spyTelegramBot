@@ -164,7 +164,8 @@ async def start_game_callback(callback: types.CallbackQuery, db: DB, bot: Bot, s
             await bot.send_photo(
                 chat_id=dataUsers[i][1],
                 photo="https://game.jofo.me/data/userfiles/95/images/2046693-advokat.jpg",
-                caption = f"Твоя роль в игре в группе {req[0][2]}<blockquote>шпион</blockquote>"
+                caption = f"Твоя роль в игре в группе {req[0][2]}<blockquote>шпион</blockquote>",
+                parse_mode="HTML"
             )
         else:
             await bot.send_photo(
