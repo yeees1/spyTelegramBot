@@ -40,55 +40,68 @@ class DB:
                 return await cur.fetchall()
 # ===================== create all tables in db =====================
     async def createTables(self):
-        await self.execute("""CREATE TABLE IF NOT EXISTS sessions (
-                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  group_id BIGINT NOT NULL UNIQUE,
-                  group_name TEXT,
-                  creator_id BIGINT NOT NULL,
-                  card_id BIGINT DEFAULT 0,
-                  votestart TEXT,
-                  isstart INT DEFAULT 0,
-                  spy_count INT
-                );""")
-
-        await self.execute("""CREATE TABLE IF NOT EXISTS users (
-                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  chat_id BIGINT NOT NULL,
-                  username TEXT,
-                  telegram_name TEXT,
-                  session_id BIGINT NOT NULL,
-                  votes INT NOT NULL DEFAULT 0,
-                  isvote INT NOT NULL DEFAULT 0
-                );""")
-
-        await self.execute("""CREATE TABLE IF NOT EXISTS files (
-                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  card_id BIGINT NOT NULL UNIQUE,
-                  name TEXT NOT NULL,
-                  image_url TEXT,
-                  description TEXT,
-                  elixirCost INT,
-                  rarity TEXT,
-                  is_evo TEXT
-                );""")
-
-        await self.execute("""CREATE TABLE IF NOT EXISTS allusers (
-                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  chat_id TEXT,
-                  username TEXT
-                );""")
-
-        await self.execute("""CREATE TABLE IF NOT EXISTS spies (
-                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                  chat_id TEXT,
-                  username TEXT,
-                  group_id TEXT
-                );""")
-
-        await self.execute("""CREATE TABLE IF NOT EXISTS `groups` (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            group_id BIGINT NOT NULL UNIQUE
-        );""")
+        try:
+            await self.execute("""CREATE TABLE IF NOT EXISTS sessions (
+                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                      group_id BIGINT NOT NULL UNIQUE,
+                      group_name TEXT,
+                      creator_id BIGINT NOT NULL,
+                      card_id BIGINT DEFAULT 0,
+                      votestart TEXT,
+                      isstart INT DEFAULT 0,
+                      spy_count INT
+                    );""")
+        except:
+            print("Таблица session уже создана")
+        try:
+            await self.execute("""CREATE TABLE IF NOT EXISTS users (
+                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                      chat_id BIGINT NOT NULL,
+                      username TEXT,
+                      telegram_name TEXT,
+                      session_id BIGINT NOT NULL,
+                      votes INT NOT NULL DEFAULT 0,
+                      isvote INT NOT NULL DEFAULT 0
+                    );""")
+        except:
+            print("Таблица users уже создана")
+        try:
+            await self.execute("""CREATE TABLE IF NOT EXISTS files (
+                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                      card_id BIGINT NOT NULL UNIQUE,
+                      name TEXT NOT NULL,
+                      image_url TEXT,
+                      description TEXT,
+                      elixirCost INT,
+                      rarity TEXT,
+                      is_evo TEXT
+                    );""")
+        except:
+            print("Таблица files уже создана")
+        try:
+            await self.execute("""CREATE TABLE IF NOT EXISTS allusers (
+                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                      chat_id TEXT,
+                      username TEXT
+                    );""")
+        except:
+            print("Таблица allusers уже создана")
+        try:
+            await self.execute("""CREATE TABLE IF NOT EXISTS spies (
+                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                      chat_id TEXT,
+                      username TEXT,
+                      group_id TEXT
+                    );""")
+        except:
+            print("Таблица spies уже создана")
+        try:
+            await self.execute("""CREATE TABLE IF NOT EXISTS `groups` (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                group_id BIGINT NOT NULL UNIQUE
+            );""")
+        except:
+            print("Таблица groups уже создана")
 
 # ===================== main function with db =====================
     async def getSession(self, group_id):
