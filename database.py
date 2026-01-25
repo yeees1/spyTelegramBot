@@ -260,7 +260,7 @@ class DB:
         return added
 
     async def getGroupInfo(self, group_id):
-        row = self.fetchone(
+        row = await self.fetchone(
             "SELECT * FROM `groups` WHERE group_id = %s",
             (group_id, )
         )
