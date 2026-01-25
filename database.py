@@ -258,3 +258,22 @@ class DB:
                         )
             await conn.commit()
         return added
+
+    async def getGroupInfo(self, group_id):
+        row = self.fetchone(
+            "SELECT * FROM `groups` WHERE group_id = %s",
+            (group_id, )
+        )
+        return row if row else False
+
+    async def deleteGroup(self, group_id):
+        await self.execute(
+            "DELETE FROM `groups` WHERE group_id = %s",
+            (group_id,)
+        )
+
+    async def insertGroup(self, group_id):
+        await self.execute(
+            "INSERT INTO `groups`(group_id) VALUES (%s)",
+            (group_id,)
+        )
