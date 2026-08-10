@@ -1,3 +1,4 @@
+import asyncio
 import aiomysql
 from typing import Any, Optional
 # ===================== class DB =====================
@@ -7,12 +8,24 @@ class DB:
         self.pool: Optional[aiomysql.Pool] = None
 
     async def connect(self):
-        self.pool = await aiomysql.create_pool(
-            minsize=1,
-            maxsize=10,
-            autocommit=False,
-            **self._cfg,
-        )
+        try:
+            self.pool = await asyncio.wait_for(
+                aiomysql.create_pool(
+                    minsize=1,
+                    maxsize=10,
+                    autocommit=False,
+                    **self._cfg,
+                ),
+                timeout=10,
+            )
+        except asyncio.TimeoutError as exc:
+            host = self._cfg["host"]
+            port = self._cfg["port"]
+            db = self._cfg["db"]
+            user = self._cfg["user"]
+            raise TimeoutError(
+                f"MySQL connection timed out after 10 seconds: {user}@{host}:{port}/{db}"
+            ) from exc
 
     async def close(self):
         if self.pool:
@@ -22,10 +35,14 @@ class DB:
 
     async def execute(self, query: str, params: tuple = ()) -> int:
         async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(query, params)
-                await conn.commit()
-                return cur.rowcount
+            try:
+                async with conn.cursor() as cur:
+                    await cur.execute(query, params)
+                    await conn.commit()
+                    return cur.rowcount
+            except Exception:
+                await conn.rollback()
+                raise
 
     async def fetchone(self, query: str, params: tuple = ()) -> Any:
         async with self.pool.acquire() as conn:
@@ -149,19 +166,23 @@ class DB:
 
     async def deleteSession(self, session_id):
         async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    "DELETE FROM sessions WHERE group_id = %s",
-                    (session_id,)
-                )
-                await cur.execute(
-                    "DELETE FROM users WHERE session_id = %s",
-                    (session_id,)
-                )
-                await cur.execute("DELETE FROM spies WHERE group_id = %s",
-                                  (session_id,)
-                )
-            await conn.commit()
+            try:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "DELETE FROM sessions WHERE group_id = %s",
+                        (session_id,)
+                    )
+                    await cur.execute(
+                        "DELETE FROM users WHERE session_id = %s",
+                        (session_id,)
+                    )
+                    await cur.execute("DELETE FROM spies WHERE group_id = %s",
+                                      (session_id,)
+                    )
+                await conn.commit()
+            except Exception:
+                await conn.rollback()
+                raise
 
     async def getVotesInSession(self, group_id):
         rows = await self.fetchall(
@@ -173,16 +194,20 @@ class DB:
 
     async def updateVotesInSession(self, group_id, add_user_id, vote_user_id):
         async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    "UPDATE users SET votes = votes + 1 WHERE chat_id = %s and session_id = %s",
-                    (add_user_id, group_id)
-                )
-                await cur.execute(
-                    "UPDATE users SET isvote = 1 WHERE chat_id = %s and session_id = %s",
-                    (vote_user_id, group_id)
-                )
-            await conn.commit()
+            try:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "UPDATE users SET votes = votes + 1 WHERE chat_id = %s and session_id = %s",
+                        (add_user_id, group_id)
+                    )
+                    await cur.execute(
+                        "UPDATE users SET isvote = 1 WHERE chat_id = %s and session_id = %s",
+                        (vote_user_id, group_id)
+                    )
+                await conn.commit()
+            except Exception:
+                await conn.rollback()
+                raise
 
     async def updateSessionInfo(self, group_id, card_id, startflag):
         await self.execute(
@@ -259,17 +284,21 @@ class DB:
     async def insert_new_cards(self, cardslist, total, status_msg):
         added = 0
         async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                for i in range(len(cardslist)):
-                    rowcount = await cur.execute(cardslist[i][0], cardslist[i][1])
-                    if rowcount == 1:
-                        added += 1
-                    if i % 10 == 0 or i == total:
-                        await status_msg.edit_text(
-                            f"🆕 Добавляю новые карты: {i}/{total}\n"
-                            f"✅ Уже добавлено: {added}"
-                        )
-            await conn.commit()
+            try:
+                async with conn.cursor() as cur:
+                    for i in range(len(cardslist)):
+                        rowcount = await cur.execute(cardslist[i][0], cardslist[i][1])
+                        if rowcount == 1:
+                            added += 1
+                        if i % 10 == 0 or i == total:
+                            await status_msg.edit_text(
+                                f"🆕 Добавляю новые карты: {i}/{total}\n"
+                                f"✅ Уже добавлено: {added}"
+                            )
+                await conn.commit()
+            except Exception:
+                await conn.rollback()
+                raise
         return added
 
     async def getGroupInfo(self, group_id):
@@ -287,6 +316,6 @@ class DB:
 
     async def insertGroup(self, group_id):
         await self.execute(
-            "INSERT INTO `groups`(group_id) VALUES (%s)",
+            "INSERT IGNORE INTO `groups`(group_id) VALUES (%s)",
             (group_id,)
         )

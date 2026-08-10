@@ -7,22 +7,13 @@ async def translate_ru(text: str) -> str:
     if not text:
         return ""
     try:
-        # googletrans синхронный → в отдельный поток + таймаут
-        res = await asyncio.wait_for(
-            asyncio.to_thread(translator.translate, text, src="en", dest="ru"),
+        # googletrans синхронный -> в отдельный поток + таймаут
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                lambda: translator.translate(text, dest="ru").text
+            ),
             timeout=8
         )
-        return res.text
-    except Exception:
-        # если перевод отвалился/завис — оставляем английский
-        return text
-
-def translate_description(text: str) -> str:
-    if not text:
-        return ""
-
-    try:
-        result = translator.translate(text, src="en", dest="ru")
-        return result.text
-    except Exception:
+    except Exception as e:
+        print(f"[translate] failed: {e}")
         return text

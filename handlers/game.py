@@ -86,8 +86,10 @@ async def vote_command(message: types.Message, db: DB):
     isUserInSession = await db.getUserInfoFromSession(message.from_user.id, groupId)
     if not isUserInSession: return
     if req == False: await message.answer("❌ Игры не существует"); return
+    if req[0][6] != 1: await message.answer("❌ Игра еще не запущена"); return
     if req[0][5] == '1': await message.answer("❌ Голосование уже создано"); return
     dataUsers = await db.getUsersFromSession(groupId)
+    if not dataUsers: await message.answer("❌ В игре нет участников"); return
     votes, sumVotes = await db.getVotesInSession(groupId)
     await db.updateVoteStatus(str(groupId), "1")
 
@@ -101,12 +103,15 @@ async def advote_callback(callback: types.CallbackQuery, db: DB, bot: Bot, stora
     groupId = data[2]
     req = await db.getSession(groupId)
     if req == False: await callback.answer("❌ Игры не существует"); return
+    if req[0][6] != 1: await callback.answer("❌ Игра еще не запущена", show_alert=True); return
     voteUser = await db.getUserInfoFromSession(callback.from_user.id, groupId)
     if not voteUser: await callback.answer("❌ Вы не участвуете в игре"); return
 
     if voteUser[0][6] == 1: await callback.answer("❌ Вы уже голосвали"); return
 
     dataUsers = await db.getUsersFromSession(groupId)
+    if not dataUsers: await callback.answer("❌ В игре нет участников", show_alert=True); return
+    if int(userIndex) >= len(dataUsers): await callback.answer("❌ Игрок не найден", show_alert=True); return
     await db.updateVotesInSession(groupId, dataUsers[int(userIndex)][1], callback.from_user.id)
     votes, sumVotes = await db.getVotesInSession(groupId)
 
@@ -130,7 +135,10 @@ async def advote_callback(callback: types.CallbackQuery, db: DB, bot: Bot, stora
             spyList += f"{mention(int(el[1]), el[2])}\n"
         await callback.message.edit_text("Голосование окончено\n" + listVotes + f"Шпионы:\n"+spyList)
         cardData = await db.getPhoto(req[0][4])
-        await bot.send_photo(chat_id=groupId, photo=cardData[3], caption="Загаданная карта - " + cardData[2])
+        if cardData:
+            await bot.send_photo(chat_id=groupId, photo=cardData[3], caption="Загаданная карта - " + cardData[2])
+        else:
+            await bot.send_message(chat_id=groupId, text="❌ Загаданная карта не найдена")
         await db.deleteSession(groupId)
         fsm = group_fsm(storage, bot, int(groupId))
         await fsm.clear()
@@ -169,12 +177,18 @@ async def start_game_callback(callback: types.CallbackQuery, db: DB, bot: Bot, s
     groupId = calldata[2]
     creatorId = calldata[3]
     if creatorId != str(callback.from_user.id): await callback.answer("❌ Запустить игру может только создатель", show_alert=True); return
-    await callback.message.edit_reply_markup(reply_markup=cancelKeyboard(groupId, "0"))
     req = await db.getSession(groupId)
     if req == False: await callback.answer("❌ Такой игры не существует", show_alert=True); return
-    await callback.answer()
     dataUsers = await db.getUsersFromSession(groupId)
     dataCards = await db.getInfoFiles()
+    if not dataUsers:
+        await callback.answer("❌ В игре нет участников", show_alert=True)
+        return
+    if not dataCards:
+        await callback.answer("❌ Карты не загружены. Сначала выполните /sync_cards", show_alert=True)
+        return
+    await callback.answer()
+    await callback.message.edit_reply_markup(reply_markup=cancelKeyboard(groupId, "0"))
     spyCount = req[0][7]
     if spyCount >= len(dataUsers) or spyCount == -1:
         spyCount = generateSpyCount(len(dataUsers))
@@ -222,8 +236,6 @@ async def start_game_callback(callback: types.CallbackQuery, db: DB, bot: Bot, s
 
 @router.callback_query(F.data.startswith("cancel"))
 async def cancel_callback(callback: types.CallbackQuery, db: DB, bot: Bot, storage: BaseStorage):
-    await callback.answer()
-
     calldata = callback.data.split("_")
     groupId = calldata[1]
     voteflag = calldata[2]
@@ -232,12 +244,15 @@ async def cancel_callback(callback: types.CallbackQuery, db: DB, bot: Bot, stora
     if not isUserInSession: await callback.answer("❌ Вы не являетесь участником игры", show_alert=True); return
     req = await db.getSession(groupId)
     if req == False: print(req, groupId); await callback.message.answer("❌ Такой игры не существует"); return
+    if req[0][6] != 1: await callback.answer("❌ Игра еще не запущена", show_alert=True); return
+    await callback.answer()
     if voteflag == "1":
         dataUsers = await db.getUsersFromSession(groupId)
-        for el in dataUsers:
-            username = el[2]
-            if not username: username = el[3]
-            listVotes+=f"{mention(int(el[1]), el[2])} - {el[5]}\n"
+        if dataUsers:
+            for el in dataUsers:
+                username = el[2]
+                if not username: username = el[3]
+                listVotes+=f"{mention(int(el[1]), el[2])} - {el[5]}\n"
     # spy_data = getUserInfo(req[0][5])
     # spy_username = spy_data[0][2]
     # if not spy_username: spy_username = spy_data[0][3]
@@ -247,7 +262,10 @@ async def cancel_callback(callback: types.CallbackQuery, db: DB, bot: Bot, stora
     dataSpies = await db.getSpies(groupId)
     for el in dataSpies:
         spyList+=f"{mention(int(el[1]), el[2])}\n"
-    await bot.send_photo(chat_id=groupId, photo=cardData[3], caption="Загаданная карта - " + cardData[2] + f"\nШпионы:\n" + spyList)
+    if cardData:
+        await bot.send_photo(chat_id=groupId, photo=cardData[3], caption="Загаданная карта - " + cardData[2] + f"\nШпионы:\n" + spyList)
+    else:
+        await bot.send_message(chat_id=groupId, text="❌ Загаданная карта не найдена")
     await db.deleteSession(groupId)
     fsm = group_fsm(storage, bot, int(groupId))
     await fsm.clear()
